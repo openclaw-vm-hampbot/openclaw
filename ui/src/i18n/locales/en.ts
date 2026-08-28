@@ -4845,6 +4845,16 @@ export const en: TranslationMap = {
       profileKey: "API key profiles: {count}",
       none: "Not configured",
     },
+    profiles: {
+      title: "Provider profiles",
+      accountOne: "1 account",
+      accounts: "{count} accounts",
+      reorderHint: "drag to set priority",
+      resetOrder: "Reset",
+      addAccount: "Add account",
+      lastUsed: "Last used {time} ago",
+      reorder: "Reorder {account}, currently position {position}",
+    },
     apiKey: {
       label: "API key",
       placeholder: "Enter provider API key",
@@ -4885,6 +4895,7 @@ export const en: TranslationMap = {
     },
     logout: {
       action: "Log out",
+      actionFor: "Log out {account}",
       confirm: "Log out of {provider}? Saved OAuth and token profiles will be removed.",
       loggingOut: "Logging out…",
       done: "Logged out.",
