@@ -330,7 +330,7 @@ function mapProvider(
   logoutProfileIds: ReadonlySet<string>,
   configBoundProfileIds: ReadonlySet<string>,
   externalCliProfileIds: ReadonlySet<string>,
-  includeProfileIdentity: boolean,
+  includeProfileDetails: boolean,
 ): ModelAuthStatusProvider {
   const providerKey = normalizeProviderId(prov.provider);
   const authProviderKey = resolveProviderIdForAuth(prov.provider, authAliasLookupParams);
@@ -392,14 +392,14 @@ function mapProvider(
         reasonCode: prof.reasonCode,
         expiry: buildExpiry(prof.remainingMs, prof.expiresAt),
         ...(externalCliProfileIds.has(prof.profileId) ? { externallyManaged: true } : {}),
-        ...(includeProfileIdentity && metadata.displayName
+        ...(includeProfileDetails && metadata.displayName
           ? { displayName: metadata.displayName }
           : {}),
-        ...(includeProfileIdentity && metadata.email ? { email: metadata.email } : {}),
+        ...(includeProfileDetails && metadata.email ? { email: metadata.email } : {}),
         ...(lastUsedAt ? { lastUsedAt } : {}),
         ...(usageByProfile.has(prof.profileId)
           ? {
-              usage: mapUsageStatus(usageByProfile.get(prof.profileId)!, includeProfileIdentity),
+              usage: mapUsageStatus(usageByProfile.get(prof.profileId)!, includeProfileDetails),
             }
           : {}),
         ...(pendingUsageProfileIds.has(prof.profileId) ? { usageRefreshPending: true } : {}),
@@ -721,7 +721,7 @@ export const modelsAuthStatusHandlers: GatewayRequestHandlers = {
   "models.authStatus": async ({ params, respond, context, client }) => {
     const now = Date.now();
     const refreshRequested = Boolean(params.refresh);
-    const includeProfileIdentity =
+    const includeProfileDetails =
       Array.isArray(client?.connect?.scopes) && client.connect.scopes.includes(ADMIN_SCOPE);
     const resolveScope = (cfg: OpenClawConfig) =>
       resolveModelAuthAgentScope(
@@ -859,28 +859,34 @@ export const modelsAuthStatusHandlers: GatewayRequestHandlers = {
             })
           : new Map<string, ProviderUsageStatus>();
       const externalCliProfileIds = new Set(getRuntimeExternalCliProfileIds(store));
-      const profileUsage = readProfileUsageStaleWhileRevalidate({
-        agentId,
-        agentDir,
-        workspaceDir,
-        authStore: providerUsageRuntime.store,
-        configRef: cfg,
-        credentialKey: providerUsageRuntime.credentialKey,
-        forceRefresh: refreshRequested,
-        targets: authHealth.profiles.flatMap((profile) => {
-          if (externalCliProfileIds.has(profile.profileId)) {
-            return [];
-          }
-          if (profile.type !== "oauth" && profile.type !== "token") {
-            return [];
-          }
-          const providerId = resolveUsageProviderId(profile.provider, {
-            credentialType: profile.type,
-          });
-          return providerId ? [{ profileId: profile.profileId, providerId }] : [];
-        }),
-        now,
-      });
+      const profileUsage = includeProfileDetails
+        ? readProfileUsageStaleWhileRevalidate({
+            agentId,
+            agentDir,
+            workspaceDir,
+            authStore: providerUsageRuntime.store,
+            configRef: cfg,
+            credentialKey: providerUsageRuntime.credentialKey,
+            forceRefresh: refreshRequested,
+            targets: authHealth.profiles.flatMap((profile) => {
+              if (externalCliProfileIds.has(profile.profileId)) {
+                return [];
+              }
+              if (profile.type !== "oauth" && profile.type !== "token") {
+                return [];
+              }
+              const providerId = resolveUsageProviderId(profile.provider, {
+                credentialType: profile.type,
+              });
+              return providerId ? [{ profileId: profile.profileId, providerId }] : [];
+            }),
+            now,
+          })
+        : {
+            usageByProfile: new Map<string, ProviderUsageStatus>(),
+            pendingProfileIds: new Set<string>(),
+            refreshPending: false,
+          };
 
       const externalProfileIds = new Set(store.runtimeExternalProfileIds ?? []);
       const logoutProfileIds = new Set(
@@ -907,7 +913,7 @@ export const modelsAuthStatusHandlers: GatewayRequestHandlers = {
           logoutProfileIds,
           configBoundProfileIds,
           externalCliProfileIds,
-          includeProfileIdentity,
+          includeProfileDetails,
         ),
       );
       const providerCapabilities = buildProviderCapabilities({

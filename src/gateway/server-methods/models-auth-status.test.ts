@@ -1538,11 +1538,15 @@ describe("models.authStatus", () => {
     expect(refreshed.providers[0]?.profiles[0]?.usage).toEqual(refreshed.providers[0]?.usage);
     expect(refreshed.providers[0]?.profiles[0]?.usageRefreshPending).toBeUndefined();
 
+    invalidateModelAuthStatusCache();
+    mocks.loadProviderUsageSummary.mockClear();
     const readOnlyOpts = createOptions({}, ["operator.read"]);
     await handler(readOnlyOpts);
     const readOnly = firstRespondCall(readOnlyOpts)?.[1] as ModelAuthStatusResult;
-    expect(readOnly.providers[0]?.usage?.accountEmail).toBe("clawd@example.com");
-    expect(readOnly.providers[0]?.profiles[0]?.usage).not.toHaveProperty("accountEmail");
+    expect(mocks.loadProviderUsageSummary).not.toHaveBeenCalled();
+    expect(readOnly.providers[0]?.usage).toBeUndefined();
+    expect(readOnly.providers[0]?.profiles[0]?.usage).toBeUndefined();
+    expect(readOnly.providers[0]?.profiles[0]?.usageRefreshPending).toBeUndefined();
   });
 
   it.each([
