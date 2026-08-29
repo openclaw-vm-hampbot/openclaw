@@ -84,6 +84,10 @@ function profilesForProvider(card: ModelProviderCard, provider: string): Provide
   );
 }
 
+function logoutProviderForProfile(card: ModelProviderCard, profileId: string): string | undefined {
+  return card.logoutTargets.find((target) => target.profileIds.includes(profileId))?.provider;
+}
+
 function completeOrder(profiles: readonly ProviderProfile[], order: readonly string[]): string[] {
   const members = new Set(profiles.map((profile) => profile.profileId));
   return [
@@ -272,6 +276,7 @@ export function renderProviderProfiles(card: ModelProviderCard, props: ProviderP
           (profile) => profile.profileId,
           (profile) => {
             const provider = card.profileProviderIds[profile.profileId] ?? card.id;
+            const logoutProvider = logoutProviderForProfile(card, profile.profileId);
             const order = movableOrder(card, provider, props.profileOrders);
             const index = order.indexOf(profile.profileId);
             const complete = order.length === profilesForProvider(card, provider).length;
@@ -347,13 +352,18 @@ export function renderProviderProfiles(card: ModelProviderCard, props: ProviderP
                   title=${logoutBlocked}
                   ?disabled=${!props.canMutate ||
                   profile.logoutSupported !== true ||
+                  !logoutProvider ||
                   props.busy[`logout:${card.id}`]}
-                  @click=${() =>
+                  @click=${() => {
+                    if (!logoutProvider) {
+                      return;
+                    }
                     props.onRequestLogout({
                       cardId: card.id,
                       label: identity,
-                      targets: [{ provider, profileIds: [profile.profileId] }],
-                    })}
+                      targets: [{ provider: logoutProvider, profileIds: [profile.profileId] }],
+                    });
+                  }}
                 >
                   ${logoutIcon}
                 </button>

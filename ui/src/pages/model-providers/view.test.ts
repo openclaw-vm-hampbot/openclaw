@@ -853,10 +853,10 @@ describe("renderModelProviders", () => {
 
   it("confirms one profile logout from its quiet icon action", () => {
     const profileCard = card({
-      credentialProviderIds: ["openai", "openai-codex"],
-      logoutTargets: [{ provider: "openai-codex", profileIds: ["openai:oauth"] }],
-      profileProviderIds: { "openai:oauth": "openai-codex" },
-      profileOrders: { "openai-codex": ["openai:oauth"] },
+      credentialProviderIds: ["openai", "agent-openai-alias"],
+      logoutTargets: [{ provider: "agent-openai-alias", profileIds: ["openai:oauth"] }],
+      profileProviderIds: { "openai:oauth": "openai" },
+      profileOrders: { openai: ["openai:oauth"] },
       profiles: [
         {
           profileId: "openai:oauth",
@@ -874,7 +874,7 @@ describe("renderModelProviders", () => {
     const pendingLogout = {
       cardId: "openai",
       label: "owner@example.com",
-      targets: [{ provider: "openai-codex", profileIds: ["openai:oauth"] }],
+      targets: [{ provider: "agent-openai-alias", profileIds: ["openai:oauth"] }],
     };
     expect(onRequestLogout).toHaveBeenCalledWith(pendingLogout);
 
