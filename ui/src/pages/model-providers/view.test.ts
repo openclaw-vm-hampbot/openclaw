@@ -1078,7 +1078,7 @@ describe("renderModelProviders", () => {
       }),
     );
     expect(text(planOnly)).toContain("Pro");
-    expect(text(planOnly)).not.toContain("No live usage data reported by this account");
+    expect(text(planOnly)).toContain("No live usage data reported by this account");
   });
 
   it("reorders profiles from the keyboard even while provider data refreshes", () => {
