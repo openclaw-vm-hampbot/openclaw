@@ -49,6 +49,7 @@ function props(overrides: Partial<ModelProvidersViewProps> = {}): ModelProviders
     configBusy: false,
     quickAddSupported: true,
     unconfiguredProviders: [{ id: "anthropic", displayName: "Anthropic" }],
+    canViewProfiles: true,
     canMutate: true,
     mutationBlockedReason: null,
     providerUsageStalled: false,
@@ -985,35 +986,35 @@ describe("renderModelProviders", () => {
     expect(onProfileOrderChange).not.toHaveBeenCalled();
   });
 
-  it("disables roster mutations when provider settings are read-only", () => {
+  it("does not expose profile identity when provider settings are read-only", () => {
     const container = mount(
       props({
+        canViewProfiles: false,
         canMutate: false,
         mutationBlockedReason: "Operator admin access required",
         cards: [
           card({
             profiles: [
               {
-                profileId: "openai:one",
+                profileId: "openai:owner@example.com",
                 type: "oauth",
                 status: "ok",
                 logoutSupported: true,
               },
             ],
-            profileProviderIds: { "openai:one": "openai" },
-            profileOrders: { openai: ["openai:one"] },
+            profileProviderIds: { "openai:owner@example.com": "openai" },
+            profileOrders: { openai: ["openai:owner@example.com"] },
             profileOrderStoredProviders: ["openai"],
           }),
         ],
       }),
     );
-    const reset = button(container, "Reset");
-    const logout = container.querySelector<HTMLButtonElement>(".model-providers__profile-logout");
 
-    expect(reset?.disabled).toBe(true);
-    expect(reset?.title).toBe("Operator admin access required");
-    expect(logout?.disabled).toBe(true);
-    expect(logout?.title).toBe("Operator admin access required");
+    expect(container.querySelector(".model-providers__profiles")).toBeNull();
+    expect(text(container)).not.toContain("owner@example.com");
+    expect(text(container.querySelector(".model-providers__credentials"))).toContain(
+      "OAuth profiles: 1",
+    );
   });
 
   it("uses the original config key for credential mutations", () => {

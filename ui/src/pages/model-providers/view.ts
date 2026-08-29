@@ -62,6 +62,7 @@ type ModelProvidersViewProps = {
   configBusy: boolean;
   quickAddSupported: boolean;
   unconfiguredProviders: ProviderOption[];
+  canViewProfiles: boolean;
   canMutate: boolean;
   mutationBlockedReason: string | null;
   /** Usage never converged before the retry budget ran out; cards lack usage. */
@@ -461,18 +462,17 @@ function renderProviderRow(card: ModelProviderCard, props: ModelProvidersViewPro
           ${renderProviderStatus(card)}
         </div>
       </div>
-      ${renderProviderProfiles(card, {
-        busy: props.busy,
-        canMutate: props.canMutate && !props.configBusy,
-        mutationBlockedReason: props.mutationBlockedReason,
-        profileOrders: props.profileOrders,
-        onOpenModelSetup: props.onOpenModelSetup,
-        onProfileOrderChange: props.onProfileOrderChange,
-        onRequestLogout: props.onRequestLogout,
-      })}
-      ${card.profiles.length === 0
-        ? renderCredentialSummary(card, props.credentialAgentLabel)
-        : nothing}
+      ${card.profiles.length > 0 && props.canViewProfiles
+        ? renderProviderProfiles(card, {
+            busy: props.busy,
+            canMutate: props.canMutate && !props.configBusy,
+            mutationBlockedReason: props.mutationBlockedReason,
+            profileOrders: props.profileOrders,
+            onOpenModelSetup: props.onOpenModelSetup,
+            onProfileOrderChange: props.onProfileOrderChange,
+            onRequestLogout: props.onRequestLogout,
+          })
+        : renderCredentialSummary(card, props.credentialAgentLabel)}
       <div
         class="model-providers__global-metrics"
         aria-busy=${props.supplementalLoading ? "true" : "false"}

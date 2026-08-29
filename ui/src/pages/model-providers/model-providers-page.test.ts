@@ -240,6 +240,47 @@ describe("ModelProvidersPage agent scope", () => {
     expect(link?.href).toBe("https://docs.openclaw.ai/concepts/model-providers");
   });
 
+  it("keeps saved account identities out of the read-only page", async () => {
+    const { context, request, snapshot } = createHarness("main");
+    snapshot.hello = {
+      auth: { role: "operator", scopes: ["operator.read"] },
+    } as typeof snapshot.hello;
+    const originalRequest = request.getMockImplementation()!;
+    request.mockImplementation(async (method: string) => {
+      if (method === "models.authStatus") {
+        return {
+          ts: 1,
+          providers: [
+            {
+              provider: "openai",
+              displayName: "OpenAI",
+              status: "ok",
+              profiles: [
+                {
+                  profileId: "openai:owner@example.com",
+                  type: "oauth",
+                  status: "ok",
+                },
+              ],
+            },
+          ],
+          providerCapabilities: [],
+        };
+      }
+      return originalRequest(method);
+    });
+
+    const page = appendPage(context);
+    await waitForFast(() => expect(page.data?.authStatus?.providers).toHaveLength(1));
+    await page.updateComplete;
+
+    expect(page.querySelector(".model-providers__profiles")).toBeNull();
+    expect(page.textContent).not.toContain("owner@example.com");
+    expect(page.querySelector(".model-providers__credentials")?.textContent).toContain(
+      "OAuth profiles: 1",
+    );
+  });
+
   it("patches thinking and fast mode through the shared config draft", async () => {
     const { context, runtimeConfig } = createHarness("main");
     const page = appendPage(context);

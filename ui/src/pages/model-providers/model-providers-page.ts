@@ -782,6 +782,9 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
         data.authStatus?.providerCapabilities,
         configuredProviderIds,
       ),
+      canViewProfiles:
+        gatewaySnapshot.phase === "connected" &&
+        hasOperatorAdminAccess(gatewaySnapshot.hello?.auth ?? null),
       canMutate: this.canMutate(),
       mutationBlockedReason: this.mutationBlockedReason(),
       providerUsageStalled: this.refreshPolicy.incompleteUsageExhausted,
