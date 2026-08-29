@@ -3,6 +3,7 @@ import {
   ErrorCodes,
   errorShape,
   missingScopeErrorShape,
+  withGatewayRequestNotStarted,
   type ErrorShape,
 } from "../../packages/gateway-protocol/src/index.js";
 import {
@@ -697,20 +698,21 @@ export async function handleGatewayRequest(
     methodRegistry,
   });
   if (authorization.error) {
-    respond(false, undefined, authorization.error);
+    respond(false, undefined, withGatewayRequestNotStarted(authorization.error));
     return;
   }
   const handler = methodRegistry.getHandler(req.method) as GatewayRequestHandler | undefined;
   if (!handler) {
-    respond(
-      false,
-      undefined,
-      errorShape(ErrorCodes.INVALID_REQUEST, `unknown method: ${req.method}`),
-    );
+    const error = errorShape(ErrorCodes.INVALID_REQUEST, `unknown method: ${req.method}`);
+    respond(false, undefined, withGatewayRequestNotStarted(error));
     return;
   }
-  const invokeHandler = () =>
-    handler({
+  // Before handler entry, the envelope owns proof that implementation work never started.
+  // After entry, authorization can change following awaited or durable work, so stay uncertain.
+  let handlerStarted = false;
+  const invokeHandler = () => {
+    handlerStarted = true;
+    return handler({
       req,
       params: (req.params ?? {}) as Record<string, unknown>,
       client,
@@ -725,11 +727,13 @@ export async function handleGatewayRequest(
         ? { sessionMutationAuthorization: authorization.sessionMutationAuthorization }
         : {}),
     });
+  };
   await runWithGatewayRequestEnvelope(req.method, client, invokeHandler, {
     context,
     isWebchatConnect,
     methodRegistry,
     requestParams: req.params,
-    reject: (error) => respond(false, undefined, error),
+    reject: (error) =>
+      respond(false, undefined, handlerStarted ? error : withGatewayRequestNotStarted(error)),
   });
 }
