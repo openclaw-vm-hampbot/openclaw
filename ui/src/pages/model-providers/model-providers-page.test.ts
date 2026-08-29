@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ModelsProbeResult } from "../../api/types.ts";
 import { waitForFast } from "../../test-helpers/wait-for.ts";
 import type { DefaultModelSelection } from "./data.ts";
-import { EMPTY_MODEL_PROVIDERS_DATA } from "./load.ts";
+import { EMPTY_MODEL_PROVIDERS_DATA, type ModelProvidersData } from "./load.ts";
 import {
   appendPage,
   createHarness,
@@ -582,6 +582,58 @@ describe("ModelProvidersPage agent scope", () => {
     await vi.waitFor(() => expect(requestCount(request, "models.authOrderSet")).toBe(1));
     await vi.waitFor(() => expect(page.profileOrders.anthropic).toBeUndefined());
     expect(page.data.authStatus?.providers[0]?.profileOrder).toEqual(["claude:two", "claude:one"]);
+  });
+
+  it("keeps a saved profile order when an older refresh finishes afterward", async () => {
+    const { context, request } = createHarness("main");
+    const page = appendPage(context);
+    await waitForFast(() => expect(page.data?.config).toEqual({}));
+    const originalRequest = request.getMockImplementation()!;
+    const staleStatus = deferred<unknown>();
+    const authStatus = {
+      ts: 1,
+      providers: [
+        {
+          provider: "openai",
+          displayName: "OpenAI",
+          status: "ok" as const,
+          profiles: [
+            { profileId: "openai:one", type: "oauth" as const, status: "ok" as const },
+            { profileId: "openai:two", type: "oauth" as const, status: "ok" as const },
+          ],
+          profileOrder: ["openai:one", "openai:two"],
+        },
+      ],
+    };
+    page.data = {
+      ...EMPTY_MODEL_PROVIDERS_DATA,
+      config: {},
+      authStatus,
+      updatedAt: 1,
+    };
+    request.mockClear();
+    request.mockImplementation(async (method: string, params?: unknown) => {
+      if (method === "models.authStatus") {
+        return staleStatus.promise;
+      }
+      if (method === "models.authOrderSet") {
+        return {};
+      }
+      void params;
+      return originalRequest(method);
+    });
+
+    const refreshing = page.refresh({ force: true });
+    await vi.waitFor(() => expect(requestCount(request, "models.authStatus")).toBe(1));
+    page.setProfileOrder("openai", "openai", ["openai:two", "openai:one"]);
+    await vi.waitFor(() => expect(requestCount(request, "models.authOrderSet")).toBe(1));
+    await vi.waitFor(() => expect(page.profileOrders.openai).toBeUndefined());
+    expect(page.data.authStatus?.providers[0]?.profileOrder).toEqual(["openai:two", "openai:one"]);
+
+    staleStatus.resolve(authStatus);
+    await refreshing;
+
+    expect(page.data.authStatus?.providers[0]?.profileOrder).toEqual(["openai:two", "openai:one"]);
   });
 
   it("keeps a queued profile order until configuration work completes", async () => {
