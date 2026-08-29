@@ -210,6 +210,12 @@ init({
 `,
     );
   }
+  // VM/custom forks must flush native profiles on graceful exit; the Inspector
+  // wrapper supports only forks/threads and cannot start these two scenarios.
+  const nativeProfiles = scenario === "vmForks" || scenario === "custom-opt-in";
+  const execArgv = nativeProfiles
+    ? ["--cpu-prof", `--cpu-prof-dir=${profiles}`, "--heap-prof", `--heap-prof-dir=${profiles}`]
+    : [];
   const config = path.join(root, "test/vitest/vitest.unit.config.ts");
   fs.writeFileSync(
     config,
@@ -233,6 +239,7 @@ export default {
   resolve: sharedVitestConfig.resolve, plugins: sharedVitestConfig.plugins,
   test: { include: ["fixture.test.ts"], pool: ${custom ? '{ name: "custom-fork", createPoolWorker: (options) => new CustomFork(options) }' : JSON.stringify(["threads", "vmForks"].includes(scenario) ? scenario : "forks")},
     isolate: false, maxWorkers: 1, fileParallelism: false,
+    execArgv: ${JSON.stringify(execArgv)},
     setupFiles: ${JSON.stringify(setupFiles)},
     ${setup === "shared" ? `runner: ${JSON.stringify(runner)},` : ""}
   }
@@ -253,7 +260,7 @@ it("completes the test before worker shutdown", () => {
 `,
   );
   const args =
-    scenario === "plain" || scenario === "custom"
+    scenario === "plain" || scenario === "custom" || nativeProfiles
       ? [
           path.join(repo, "scripts/run-vitest.mjs"),
           "run",
@@ -289,6 +296,11 @@ it("completes the test before worker shutdown", () => {
     output += chunk;
   });
   const { code } = await completion.finally(detachCleanup);
+  if (!fs.existsSync(receipt)) {
+    throw new Error(
+      `Vitest ${scenario} exited with code ${code} before running the fixture:\n${output}`,
+    );
+  }
   const state = JSON.parse(fs.readFileSync(receipt, "utf8"));
   let workerStopped = false;
   try {
