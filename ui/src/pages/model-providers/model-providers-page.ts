@@ -79,7 +79,7 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
   // Null Task runs supersede stale work without counting as a real load.
   private loadClient: GatewayBrowserClient | null = null;
   private routeDataObserved = false;
-  private authStatusClient: GatewayBrowserClient | null = null;
+  private authStatusRequest: { client: GatewayBrowserClient; epoch: number } | null = null;
   // Global config writes survive agent switches; their card state does not.
   private agentEpoch = 0;
   private probeEpochs = new Map<string, number>();
@@ -125,7 +125,7 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
       }));
     },
     onComplete: ({ authStatus, client, agentId, epoch }) => {
-      this.authStatusClient = null;
+      this.authStatusRequest = null;
       const data = this.data;
       if (
         !data ||
@@ -145,12 +145,23 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
       );
     },
     onError: () => {
-      this.authStatusClient = null;
+      const request = this.authStatusRequest;
+      this.authStatusRequest = null;
+      const data = this.data;
+      if (
+        !request ||
+        !data ||
+        request.client !== this.dataClient ||
+        !this.gateway.isCurrent(request)
+      ) {
+        return;
+      }
+      this.refreshPolicy.markProviderUsage(data.providerUsage, data.updatedAt, request.epoch, true);
     },
   });
   private readonly refreshPolicy = new UsageRefreshPolicy({
     isLoading: () =>
-      this.loadClient !== null || this.authStatusClient !== null || this.supplemental.usageLoading,
+      this.loadClient !== null || this.authStatusRequest !== null || this.supplemental.usageLoading,
     // Account usage is part of auth status; provider-only convergence can stay supplemental.
     reload: () =>
       this.data?.authStatus?.usageRefreshPending === true
@@ -360,14 +371,15 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
       this.refreshPolicy.markLoadDeferred();
       return Promise.resolve();
     }
-    this.authStatusClient = client;
-    return this.authStatusTask.run([client, this.selectedAgentId, this.gateway.epoch]);
+    const epoch = this.gateway.epoch;
+    this.authStatusRequest = { client, epoch };
+    return this.authStatusTask.run([client, this.selectedAgentId, epoch]);
   }
 
   private cancelAuthStatusRefresh(): void {
     // Core refresh owns the next auth snapshot; retire the narrower poll so it
     // cannot overwrite that snapshot after the refresh completes.
-    this.authStatusClient = null;
+    this.authStatusRequest = null;
     void this.authStatusTask.run([null, this.selectedAgentId, this.gateway.epoch]);
   }
 
