@@ -64,6 +64,8 @@ export type ModelAuthStatusProvider = {
     envVar?: string;
   };
   usage?: ModelAuthUsage;
+  /** Whether provider usage is organization-wide or mirrors one saved account. */
+  usageScope?: "provider" | "account";
 };
 
 export type ModelProviderCapability = {

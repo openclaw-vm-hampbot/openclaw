@@ -347,10 +347,11 @@ function mapProvider(
   const usageKey = resolveUsageProviderId(prov.provider, {
     credentialType: usageProfile?.type,
   });
-  const usage = usageKey
-    ? (usageByProvider.get(usageKey) ??
-      (usageProfile ? usageByProfile.get(usageProfile.profileId) : undefined))
-    : undefined;
+  const providerUsage = usageKey ? usageByProvider.get(usageKey) : undefined;
+  const accountUsage =
+    usageKey && usageProfile ? usageByProfile.get(usageProfile.profileId) : undefined;
+  const usage = providerUsage ?? accountUsage;
+  const usageScope = providerUsage ? "provider" : accountUsage ? "account" : undefined;
   const rawRollup = aggregateRefreshableAuthStatus(
     prov,
     Date.now(),
@@ -414,6 +415,7 @@ function mapProvider(
     ...(profileOrder.fromStore ? { profileOrderStored: true } : {}),
     ...(apiKey ? { apiKey } : {}),
     usage: usage && usageKey ? mapUsageStatus(usage) : undefined,
+    ...(usageScope ? { usageScope } : {}),
   };
 }
 

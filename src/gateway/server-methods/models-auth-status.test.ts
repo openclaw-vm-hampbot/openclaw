@@ -1535,6 +1535,7 @@ describe("models.authStatus", () => {
       billing: [{ type: "budget", used: 157.85, limit: 400, unit: "USD", period: "month" }],
       accountEmail: "clawd@example.com",
     });
+    expect(refreshed.providers[0]?.usageScope).toBe("account");
     expect(refreshed.providers[0]?.profiles[0]?.usage).toEqual(refreshed.providers[0]?.usage);
     expect(refreshed.providers[0]?.profiles[0]?.usageRefreshPending).toBeUndefined();
 
@@ -1594,10 +1595,26 @@ describe("models.authStatus", () => {
         manifestRegistry: { plugins: [plugin] },
         plugins: [plugin],
       });
+      mocks.loadProviderUsageSummary.mockResolvedValue({
+        updatedAt: 0,
+        providers: [
+          {
+            provider,
+            displayName: provider,
+            windows: [{ label: "week", usedPercent: 25 }],
+          },
+        ],
+      });
 
+      let refreshed: ModelAuthStatusResult | undefined;
       await withEnvAsync({ [envVar]: "admin-key" }, async () => {
         await readAuthStatus();
         await waitForFast(() => expect(mocks.loadProviderUsageSummary).toHaveBeenCalledTimes(2));
+        await waitForFast(async () => {
+          refreshed = await readAuthStatus();
+          expect(refreshed.providers[0]?.usageScope).toBe("provider");
+          expect(refreshed.providers[0]?.profiles[0]?.usage).toBeDefined();
+        });
       });
 
       expect(mocks.loadProviderUsageSummary).toHaveBeenCalledWith({
