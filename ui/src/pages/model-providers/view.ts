@@ -241,7 +241,7 @@ function renderProviderMetrics(
   const hasProfiles = card.profiles.length > 0;
   const hasProfileUsage = card.profiles.some((profile) => profile.usage !== undefined);
   const usage =
-    hasProfileUsage && !card.usageIndependent && !hasApiKeyCredential(card)
+    hasProfileUsage && card.usageScope !== "provider" && !hasApiKeyCredential(card)
       ? undefined
       : card.usage;
   const localCost = renderLocalCost(card, costDays);

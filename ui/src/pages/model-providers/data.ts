@@ -72,8 +72,8 @@ export type ModelProviderCard = {
   catalogStatus?: ModelCatalogProviderOutcome["status"];
   /** Live provider-reported usage (quota windows, billing, cost history). */
   usage?: ProviderUsageSnapshot;
-  /** Provider-level usage that is independent from account snapshots. */
-  usageIndependent?: boolean;
+  /** Scope recorded by the provider-usage owner. */
+  usageScope?: ModelAuthStatusProvider["usageScope"];
   /** Locally-computed session spend for the requested window. */
   localCost?: ModelProviderLocalCost;
 };
@@ -303,6 +303,7 @@ export function buildModelProviderCards(input: ModelProviderCardsInput): ModelPr
         ...(usage.costHistory ? { costHistory: usage.costHistory } : {}),
         ...(usage.error ? { error: usage.error } : {}),
       };
+      draft.card.usageScope = provider.usageScope;
     }
   }
 
@@ -329,7 +330,7 @@ export function buildModelProviderCards(input: ModelProviderCardsInput): ModelPr
     // usage.status snapshots carry cost history and errors that the
     // auth-status embed drops, so they win when both are present.
     draft.card.usage = snapshot;
-    draft.card.usageIndependent = true;
+    draft.card.usageScope = "provider";
     draft.hasUsageSnapshot = true;
   }
 

@@ -693,13 +693,13 @@ describe("renderModelProviders", () => {
     expect(text(metrics)).toContain("12 credits");
   });
 
-  it("keeps usage.status data beside OAuth usage without an inference API key", () => {
+  it("keeps provider-scoped usage beside OAuth usage without an inference API key", () => {
     const container = mount(
       props({
         cards: [
           card({
             apiKey: undefined,
-            usageIndependent: true,
+            usageScope: "provider",
             profiles: [
               {
                 profileId: "openai:oauth",
