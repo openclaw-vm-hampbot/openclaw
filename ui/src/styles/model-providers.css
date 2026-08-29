@@ -162,7 +162,6 @@
 }
 
 .model-providers__profile-grip:not(:disabled) {
-  cursor: grab;
   touch-action: none;
 }
 
