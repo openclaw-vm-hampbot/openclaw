@@ -240,11 +240,16 @@ describe("ModelProvidersPage agent scope", () => {
     expect(link?.href).toBe("https://docs.openclaw.ai/concepts/model-providers");
   });
 
-  it("keeps saved account identities out of the read-only page", async () => {
+  it.each([
+    {
+      access: "read-only",
+      hello: { auth: { role: "operator", scopes: ["operator.read"] } },
+    },
+    { access: "missing-auth", hello: null },
+    { access: "missing-scopes", hello: { auth: { role: "operator" } } },
+  ])("keeps saved account identities out of the $access page", async ({ hello }) => {
     const { context, request, snapshot } = createHarness("main");
-    snapshot.hello = {
-      auth: { role: "operator", scopes: ["operator.read"] },
-    } as typeof snapshot.hello;
+    snapshot.hello = hello as typeof snapshot.hello;
     const originalRequest = request.getMockImplementation()!;
     request.mockImplementation(async (method: string) => {
       if (method === "models.authStatus") {
@@ -744,7 +749,10 @@ describe("ModelProvidersPage agent scope", () => {
   });
 
   it("keeps ordering available when a same-version gateway rejects the core method", async () => {
-    const { context, request } = createHarness("main");
+    const { context, request, snapshot } = createHarness("main");
+    snapshot.hello = {
+      auth: { role: "operator", scopes: ["operator.admin"] },
+    } as typeof snapshot.hello;
     const page = appendPage(context);
     await waitForFast(() => expect(page.data?.config).toEqual({}));
     page.data = {
@@ -783,7 +791,10 @@ describe("ModelProvidersPage agent scope", () => {
   });
 
   it("confirms an account logout before removing its saved credential", async () => {
-    const { context, request } = createHarness("main");
+    const { context, request, snapshot } = createHarness("main");
+    snapshot.hello = {
+      auth: { role: "operator", scopes: ["operator.admin"] },
+    } as typeof snapshot.hello;
     const page = appendPage(context);
     await waitForFast(() => expect(page.data?.config).toEqual({}));
     page.data = {

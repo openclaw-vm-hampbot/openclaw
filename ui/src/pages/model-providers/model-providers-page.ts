@@ -735,6 +735,7 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
 
   override render() {
     const gatewaySnapshot = this.context.gateway.snapshot;
+    const operatorAuth = gatewaySnapshot.hello?.auth;
     const agentsState = this.context.agents.state;
     const agents = agentsState.agentsList?.agents ?? [];
     const rosterError = agentsState.agentsList ? null : agentsState.agentsError;
@@ -789,7 +790,8 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
       ),
       canViewProfiles:
         gatewaySnapshot.phase === "connected" &&
-        hasOperatorAdminAccess(gatewaySnapshot.hello?.auth ?? null),
+        operatorAuth?.scopes !== undefined &&
+        hasOperatorAdminAccess(operatorAuth),
       canMutate: this.canMutate(),
       mutationBlockedReason: this.mutationBlockedReason(),
       providerUsageStalled: this.refreshPolicy.incompleteUsageExhausted,
