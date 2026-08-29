@@ -268,9 +268,13 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
     void this.refreshTask.run([null, this.selectedAgentId, false]);
   }
 
-  private invalidateRequests() {
+  private cancelProfileRefreshes() {
     this.cancelCoreRefresh();
     this.cancelAuthStatusRefresh();
+  }
+
+  private invalidateRequests() {
+    this.cancelProfileRefreshes();
     this.supplemental.invalidate();
   }
 
@@ -666,7 +670,7 @@ export class ModelProvidersPage extends OpenClawLightDomElement {
             return;
           }
           if (pending.profileIds) {
-            this.cancelCoreRefresh();
+            this.cancelProfileRefreshes();
             this.applyProfileOrder(provider, pending.profileIds);
           } else {
             await this.refresh({ force: true });

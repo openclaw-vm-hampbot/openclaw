@@ -163,6 +163,63 @@ describe("ModelProvidersPage usage convergence", () => {
     await vi.waitFor(() => expect(page.data?.costByProvider).toEqual([]));
   });
 
+  it("keeps a saved profile order when an older account-usage poll finishes afterward", async () => {
+    vi.useFakeTimers();
+    focusDocument();
+    const harness = createHarness("main");
+    const originalRequest = harness.request.getMockImplementation()!;
+    const staleStatus = deferred<unknown>();
+    const authStatus = {
+      ts: 1,
+      usageRefreshPending: true,
+      providers: [
+        {
+          provider: "openai",
+          displayName: "OpenAI",
+          status: "ok" as const,
+          profiles: [
+            { profileId: "openai:one", type: "oauth" as const, status: "ok" as const },
+            { profileId: "openai:two", type: "oauth" as const, status: "ok" as const },
+          ],
+          profileOrder: ["openai:one", "openai:two"],
+        },
+      ],
+    };
+    let authStatusCalls = 0;
+    harness.request.mockImplementation(async (method: string, params?: unknown) => {
+      if (method === "models.authStatus") {
+        authStatusCalls += 1;
+        return authStatusCalls === 1 ? authStatus : staleStatus.promise;
+      }
+      if (method === "models.authOrderSet") {
+        return {};
+      }
+      void params;
+      return originalRequest(method);
+    });
+    const page = appendPage(harness.context);
+    await page.updateComplete;
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(authStatusCalls).toBe(2);
+
+    page.setProfileOrder("openai", "openai", ["openai:two", "openai:one"]);
+    await vi.waitFor(() => expect(requestCount(harness.request, "models.authOrderSet")).toBe(1));
+    await vi.waitFor(() => expect(page.profileOrders.openai).toBeUndefined());
+    expect(page.data?.authStatus?.providers[0]?.profileOrder).toEqual([
+      "openai:two",
+      "openai:one",
+    ]);
+
+    staleStatus.resolve(authStatus);
+    await vi.advanceTimersByTimeAsync(0);
+    await page.updateComplete;
+
+    expect(page.data?.authStatus?.providers[0]?.profileOrder).toEqual([
+      "openai:two",
+      "openai:one",
+    ]);
+  });
+
   it("does not warn about a stall while disconnected", async () => {
     vi.useFakeTimers();
     const harness = createHarness("main");
