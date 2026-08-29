@@ -699,7 +699,7 @@ describe("renderModelProviders", () => {
         cards: [
           card({
             apiKey: undefined,
-            usageSource: "usage-status",
+            usageIndependent: true,
             profiles: [
               {
                 profileId: "openai:oauth",
@@ -1046,7 +1046,7 @@ describe("renderModelProviders", () => {
     );
     const pendingUsage = pending.querySelectorAll(".model-providers__profile-usage");
     expect(text(pendingUsage[0] ?? null)).toContain("Loading");
-    expect(text(pendingUsage[1] ?? null)).toContain("No live usage data reported by this account");
+    expect(text(pendingUsage[1] ?? null)).toContain("No live usage data reported");
 
     const unsupported = mount(
       props({
@@ -1058,7 +1058,7 @@ describe("renderModelProviders", () => {
       }),
     );
     expect(text(unsupported.querySelector(".model-providers__profile-usage"))).toContain(
-      "No live usage data reported by this account",
+      "No live usage data reported",
     );
 
     const planOnly = mount(
@@ -1078,7 +1078,7 @@ describe("renderModelProviders", () => {
       }),
     );
     expect(text(planOnly)).toContain("Pro");
-    expect(text(planOnly)).toContain("No live usage data reported by this account");
+    expect(text(planOnly)).toContain("No live usage data reported");
   });
 
   it("reorders profiles from the keyboard even while provider data refreshes", () => {
