@@ -1361,8 +1361,8 @@ class ChatFullMessageOwnershipLayoutTest {
       }
     }
     assertTrue(gateway.operatorConnection.get() > oldConnection)
-    assertEquals("full-message-${gateway.operatorConnection.get()}", runtime.serverName.value)
     awaitRuntimeReady(key)
+    assertEquals("full-message-${gateway.operatorConnection.get()}", runtime.serverName.value)
   }
 
   private fun assertRetiredDisclosureCannotLoad(
