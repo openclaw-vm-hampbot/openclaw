@@ -29,3 +29,44 @@ mutations):
 
 Local loopback URLs and ephemeral dev-profile state only; no secrets in
 frame.
+
+
+## Exact-head cache-gate proof (head `8ad886a1a54`, 2026-08-31)
+
+Captured from a real Gateway booted from the exact branch head (build
+`2026.8.1-8ad886a1a541`, dev profile, loopback `127.0.0.1:19001`, served
+production UI bundle built from `ui/` at the same head). The browser
+session holds a cached enabled `dreamingStatus` payload while an external
+config writer changes gates; no page reload between frames:
+
+- `07-cache-enabled-active.png` — proof-dreamer-3 participating: header
+  renders `Default: Enabled · AGENT INCLUDED`; the Dreaming status panel
+  presents the live payload with phases (`Light 3:00 AM`, `Deep 3:00 AM`,
+  `Rem 3:00 AM`).
+- `08-external-exclusion-cache-gated.png` — an external config writer
+  excludes the agent while the panel is open. Without a reload the header
+  re-renders to `Default: Enabled · Dreaming is excluded for this agent. ·
+  AGENT EXCLUDED` and the cached enabled payload is gated: the phase rows
+  render `—` (no cached next-run times), counts drop to zero.
+- `09-participation-restored.png` — the external writer restores
+  participation: the live phases render again (config net-zero mutated).
+- `10-global-disable-cache-gated.png` — the external writer disables the
+  global Dreaming master switch (`plugins.entries["memory-core"].config.
+  dreaming.enabled = false`) while the enabled payload stays cached: the
+  panel drops the active phases/counts without reload (rows render `—`).
+
+Console transcript of the same run (capture-script assertions):
+
+    [A1-enabled] toggle="Agent Included" on=true phases=3
+    [A1-enabled] phaseStatuses=["Light 3:00 AM","Deep 3:00 AM","Rem 3:00 AM"]
+    [A2-excluded] toggle="Agent Excluded" on=false phases=3
+    [A2-excluded] muted="Default: Enabled · Dreaming is excluded for this agent."
+    [A2-excluded] phaseStatuses=["Light —","Deep —","Rem —"]
+    [A3-restored] toggle="Agent Included" on=true phases=3
+    [A3-restored] phaseStatuses=["Light 3:00 AM","Deep 3:00 AM","Rem 3:00 AM"]
+    [B-global-off] toggle="Agent Included" on=true phases=3
+    [B-global-off] phaseStatuses=["Light —","Deep —","Rem —"]
+    [dreaming-cache-gate-proof] PASS
+
+Local loopback URLs and ephemeral dev-profile state only; no secrets in
+frame.
