@@ -70,3 +70,46 @@ Console transcript of the same run (capture-script assertions):
 
 Local loopback URLs and ephemeral dev-profile state only; no secrets in
 frame.
+
+
+## Exact-final-head shared-workspace ambiguity proof (head `816d6d4d28d8`, 2026-08-31)
+
+Captured from a real Gateway booted from the exact final branch head (build
+`2026.8.1-816d6d4d28d8`, `dist/build-info.json` confirms commit
+`816d6d4d28d87135cd82b85abce4f7b172e22069`; dev profile, loopback
+`127.0.0.1:19001`; served production UI bundle built from `ui/` at the same
+head). This exercises the exact changed UI path of the final head:
+`ui/src/pages/agents/memory/memory-panel.ts` shared-workspace diagnosis
+recovery for an excluded co-owner (lines ~445–466). Scenario mirrors the
+shipped regression `preserves the shared-workspace diagnosis for an excluded
+co-owner with a cached payload` (`memory-panel.test.ts`, added at this head):
+
+Setup: three agents share one workspace (`shared-proof`); proof-dreamer-3
+participates (enabled), proof-dreamer-2 is excluded, plus an additional
+included co-owner — the mixed included/excluded owner set that Doctor
+reports as `shared-workspace-ambiguity` to both co-owners.
+
+- `11-ambiguity-included-coowner.png` — proof-dreamer-3 (included co-owner)
+  Memory tab: the panel presents the ambiguity status payload with the
+  specific notice and `Agent Included`.
+- `12-excluded-coowner-ambiguity-preserved.png` — an external config writer
+  excludes proof-dreamer-3 while the panel is open, no reload: the header
+  toggles to `Agent Excluded` AND the specific shared-workspace diagnosis
+  survives the participation gate ("Dreaming is paused because this
+  workspace is shared with an excluded agent."), the generic exclusion
+  notice is NOT shown, status renders `Dreaming Idle`, `0 promoted` (stale
+  count suppressed), and all phase next-runs are gated to `—` (no cached
+  schedule).
+
+Console transcript of the same run (capture-script assertions):
+
+    [A-included] toggle="Agent Included" on=true
+    [A-included] notice present, cached ambiguity payload acquired
+    [B-excluded] toggle="Agent Excluded"
+    [B-excluded] ambiguityNotice=true genericNotice=false
+    [B-excluded] statusLabel="Dreaming Idle" promotedZero=true
+    [B-excluded] phaseNexts=["—","—","—"]
+    [shared-workspace-ambiguity-proof] PASS
+
+Local loopback URLs and ephemeral dev-profile state only; no secrets in
+frame.
